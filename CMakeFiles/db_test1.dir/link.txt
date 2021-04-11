@@ -1,0 +1,1 @@
+/usr/bin/c++   -fno-exceptions -fno-rtti   CMakeFiles/db_test1.dir/test/db_test1.cc.o  -o db_test1  libleveldb.a -lpthread 

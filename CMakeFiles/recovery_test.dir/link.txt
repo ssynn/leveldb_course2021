@@ -1,0 +1,1 @@
+/usr/bin/c++   -fno-exceptions -fno-rtti   CMakeFiles/recovery_test.dir/util/testutil.cc.o CMakeFiles/recovery_test.dir/db/recovery_test.cc.o  -o recovery_test  libleveldb.a lib/libgmock.a lib/libgtest.a -lpthread 

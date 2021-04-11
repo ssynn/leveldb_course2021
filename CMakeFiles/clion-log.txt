@@ -1,0 +1,4 @@
+/home/zoe/nic/clion-2019.3.3/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE= -G "CodeBlocks - Unix Makefiles" /home/zoe/CLionProjects/leveldb
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/zoe/CLionProjects/leveldb

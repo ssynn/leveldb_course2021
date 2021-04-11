@@ -1,0 +1,1 @@
+/usr/bin/c++   -fno-exceptions -fno-rtti   CMakeFiles/dbformat_test.dir/util/testutil.cc.o CMakeFiles/dbformat_test.dir/db/dbformat_test.cc.o  -o dbformat_test  libleveldb.a lib/libgmock.a lib/libgtest.a -lpthread 

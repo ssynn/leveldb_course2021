@@ -1,0 +1,1 @@
+/usr/bin/c++   -fno-exceptions -fno-rtti   CMakeFiles/corruption_test.dir/util/testutil.cc.o CMakeFiles/corruption_test.dir/db/corruption_test.cc.o  -o corruption_test  libleveldb.a lib/libgmock.a lib/libgtest.a -lpthread 

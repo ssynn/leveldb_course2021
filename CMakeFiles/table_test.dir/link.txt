@@ -1,0 +1,1 @@
+/usr/bin/c++   -fno-exceptions -fno-rtti   CMakeFiles/table_test.dir/util/testutil.cc.o CMakeFiles/table_test.dir/table/table_test.cc.o  -o table_test  libleveldb.a lib/libgmock.a lib/libgtest.a -lpthread 

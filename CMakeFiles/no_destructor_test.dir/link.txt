@@ -1,0 +1,1 @@
+/usr/bin/c++   -fno-exceptions -fno-rtti   CMakeFiles/no_destructor_test.dir/util/testutil.cc.o CMakeFiles/no_destructor_test.dir/util/no_destructor_test.cc.o  -o no_destructor_test  libleveldb.a lib/libgmock.a lib/libgtest.a -lpthread 

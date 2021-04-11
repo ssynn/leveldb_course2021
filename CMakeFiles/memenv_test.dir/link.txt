@@ -1,0 +1,1 @@
+/usr/bin/c++   -fno-exceptions -fno-rtti   CMakeFiles/memenv_test.dir/util/testutil.cc.o CMakeFiles/memenv_test.dir/helpers/memenv/memenv_test.cc.o  -o memenv_test  libleveldb.a lib/libgmock.a lib/libgtest.a -lpthread 
