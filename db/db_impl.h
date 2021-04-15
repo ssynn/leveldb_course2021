@@ -42,6 +42,8 @@ class DBImpl : public DB {
   Status Write(const WriteOptions& options, WriteBatch* updates) override;
   Status Get(const ReadOptions& options, const Slice& key,
              std::string* value) override;
+  Status GetWithPosition(const ReadOptions& options, const Slice& key,
+                        std::string* value, std::string* position) override;
   Iterator* NewIterator(const ReadOptions&) override;
   const Snapshot* GetSnapshot() override;
   void ReleaseSnapshot(const Snapshot* snapshot) override;

@@ -75,6 +75,10 @@ class LEVELDB_EXPORT Status {
   // Returns the string "OK" for success.
   std::string ToString() const;
 
+  void SetMsg(std::string value){msg = value;}
+
+  std::string GetMsg() const {return msg;};
+
  private:
   enum Code {
     kOk = 0,
@@ -98,6 +102,7 @@ class LEVELDB_EXPORT Status {
   //    state_[4]    == code
   //    state_[5..]  == message
   const char* state_;
+  std::string msg;
 };
 
 inline Status::Status(const Status& rhs) {

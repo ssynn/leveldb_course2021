@@ -65,6 +65,7 @@ class Version {
   struct GetStats {
     FileMetaData* seek_file;
     int seek_file_level;
+    Status s;
   };
 
   // Append to *iters a sequence of iterators that will

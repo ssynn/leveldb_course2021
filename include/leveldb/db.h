@@ -87,6 +87,9 @@ class LEVELDB_EXPORT DB {
   virtual Status Get(const ReadOptions& options, const Slice& key,
                      std::string* value) = 0;
 
+  virtual Status GetWithPosition(const ReadOptions& options, const Slice& key,
+                                std::string* value, std::string* position) = 0;
+
   // Return a heap-allocated iterator over the contents of the database.
   // The result of NewIterator() is initially invalid (caller must
   // call one of the Seek methods on the iterator before using it).

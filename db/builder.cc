@@ -93,7 +93,7 @@ Status BuildTable(const std::string& dbname, Env* env, const Options& options,
       std::string meta_str;
       meta_str += "number: " + std::to_string(meta->number);
       meta_str += "\nfile_size: " + std::to_string(meta->file_size);
-      meta_str += "\nsmallest: " + std::string(meta->smallest.user_key().data(), meta->smallest.user_key().size()-8);
+      meta_str += "\nsmallest: " + std::string(meta->smallest.user_key().data(), meta->smallest.user_key().size());
       meta_str += "\nlargest: " + std::string(meta->largest.user_key().data(), meta->largest.user_key().size());
       meta_str += "\n";
       plaintext_file->Append(meta_str.data());

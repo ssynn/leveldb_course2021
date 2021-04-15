@@ -1155,6 +1155,80 @@ Status DBImpl::Get(const ReadOptions& options, const Slice& key,
   return s;
 }
 
+Status DBImpl::GetWithPosition(const ReadOptions& options, const Slice& key,
+                   std::string* value, std::string* position) {
+  Status s;
+  MutexLock l(&mutex_);
+  SequenceNumber snapshot;
+  if (options.snapshot != nullptr) {
+    snapshot =
+        static_cast<const SnapshotImpl*>(options.snapshot)->sequence_number();
+  } else {
+    snapshot = versions_->LastSequence();
+  }
+
+  MemTable* mem = mem_;
+  MemTable* imm = imm_;
+  Version* current = versions_->current();
+  mem->Ref();
+  if (imm != nullptr) imm->Ref();
+  current->Ref();
+
+  bool have_stat_update = false;
+  Version::GetStats stats;
+
+  // Unlock while reading from files and memtables
+  {
+    mutex_.Unlock();
+    // First look in the memtable, then in the immutable memtable (if any).
+    LookupKey lkey(key, snapshot);
+    if (mem->Get(lkey, value, &s)) {  // NOTE: 先从active memtable里找
+      // Done
+      const uint64_t tag = DecodeFixed64(s.GetMsg().data());
+      const uint64_t ver = tag >> 8;
+      std::string ans = "'" + key.ToString() + "' @ " + std::to_string(ver);
+      switch (tag & 0xff) {
+        case 1: {
+          ans += " : val => '" + *value + "'";
+          break;
+        }
+        case 0:
+          ans += " : del => ''";
+      }
+      ans += ", Active memtable";
+      *position = ans;
+    } else if (imm != nullptr &&
+               imm->Get(lkey, value, &s)) {  // NOTE: active memtable里没找到就从immtable里找
+      // Done
+      const uint64_t tag = DecodeFixed64(s.GetMsg().data());
+      const uint64_t ver = tag >> 8;
+      std::string ans = "'" + key.ToString() + "' @ " + std::to_string(ver);
+      switch (tag & 0xff) {
+        case 1: {
+          ans += " : val => '" + *value + "'";
+          break;
+        }
+        case 0:
+          ans += " : del => ''";
+      }
+      ans += ", Immutable memtable";
+      *position = ans;
+    } else {
+      s = current->Get(options, lkey, value, &stats);  // NOTE: memtable没找到就从SSTable里找
+      have_stat_update = true;
+      *position = stats.s.GetMsg();
+    }
+    mutex_.Lock();
+  }
+  if (have_stat_update && current->UpdateStats(stats)) {
+    MaybeScheduleCompaction();
+  }
+  mem->Unref();
+  if (imm != nullptr) imm->Unref();
+  current->Unref();
+  return s;
+}
+
 Iterator* DBImpl::NewIterator(const ReadOptions& options) {
   SequenceNumber latest_snapshot;
   uint32_t seed;

@@ -257,6 +257,7 @@ struct Saver {
   SaverState state;
   const Comparator* ucmp;
   Slice user_key;
+  SequenceNumber seq;
   std::string* value;
 };
 }  // namespace
@@ -270,6 +271,7 @@ static void SaveValue(void* arg, const Slice& ikey, const Slice& v) {
       s->state = (parsed_key.type == kTypeValue) ? kFound : kDeleted;
       if (s->state == kFound) {
         s->value->assign(v.data(), v.size());
+        s->seq = parsed_key.sequence;
       }
     }
   }
@@ -396,6 +398,23 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
   state.saver.value = value;
 
   ForEachOverlapping(state.saver.user_key, state.ikey, &state, &State::Match);
+
+  if(state.found){
+    std::string ans = "'"+k.user_key().ToString()+"' @ ";
+    const uint64_t tag = DecodeFixed64(k.internal_key().data()+k.internal_key().size()-8);
+    ans += std::to_string(state.saver.seq);
+    switch (tag & 0xff) {
+      case 1: {
+        ans += " : val => '" + *value + "'";
+        break;
+      }
+      case 0:
+        ans += " : del => ''";
+    }
+    ans += ", SSTable => '" + std::to_string(state.last_file_read_level)
+           + "', '" + std::to_string(state.last_file_read->number)+"'";
+    stats->s.SetMsg(ans);
+  }
 
   return state.found ? state.s : Status::NotFound(Slice());
 }

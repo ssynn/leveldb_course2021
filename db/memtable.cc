@@ -119,6 +119,7 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
             Slice(key_ptr, key_length - 8), key.user_key()) == 0) {
       // Correct user key
       const uint64_t tag = DecodeFixed64(key_ptr + key_length - 8);
+      s->SetMsg(std::string(key_ptr + key_length - 8, 8)); // NOTE: 在Status内记录版本号和tag
       switch (static_cast<ValueType>(tag & 0xff)) {
         case kTypeValue: {
           Slice v = GetLengthPrefixedSlice(key_ptr + key_length);
