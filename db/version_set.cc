@@ -330,12 +330,12 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
   stats->seek_file_level = -1;
 
   struct State {
-    Saver saver;
+    Saver saver;//保存结果
     GetStats* stats;
     const ReadOptions* options;
     Slice ikey;
-    FileMetaData* last_file_read;
-    int last_file_read_level;
+    FileMetaData* last_file_read;// meta信息
+    int last_file_read_level;//
 
     VersionSet* vset;
     Status s;
@@ -401,15 +401,18 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
 
   if(state.found){
     std::string ans = "'"+k.user_key().ToString()+"' @ ";
-    const uint64_t tag = DecodeFixed64(k.internal_key().data()+k.internal_key().size()-8);
     ans += std::to_string(state.saver.seq);
-    switch (tag & 0xff) {
-      case 1: {
+    switch (state.saver.state) {
+      case kFound: {
         ans += " : val => '" + *value + "'";
         break;
       }
-      case 0:
+      case kDeleted:
         ans += " : del => ''";
+      case kNotFound:
+        break;
+      case kCorrupt:
+        break;
     }
     ans += ", SSTable => '" + std::to_string(state.last_file_read_level)
            + "', '" + std::to_string(state.last_file_read->number)+"'";
