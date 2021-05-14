@@ -232,27 +232,40 @@ class ColumnFamilyIterator: public Iterator{
 private:
   /* data */
 public:
-  ColumnFamilyIterator(ColumnFamilyHandle &cf, Iterator *iter):iter_(iter), cf_(cf){};
+  ColumnFamilyIterator(ColumnFamilyHandle &cf, Iterator *iter):valid_(false),iter_(iter), cf_(cf){};
   ~ColumnFamilyIterator(){
     delete iter_;
   }
 
-  bool Valid() const override { return iter_->Valid(); }
+  bool Valid() const override { return valid_; }
 
-  void Seek(const Slice& k) override { iter_->Seek(cf_.GetPrefix()+k.ToString()); }
+  void Seek(const Slice& k) override { 
+    iter_->Seek(cf_.GetPrefix()+k.ToString()); 
+    SetValid();
+  }
 
-  void SeekToFirst() override { iter_->Seek(cf_.GetPrefix()); }
+  void SeekToFirst() override { 
+    iter_->Seek(cf_.GetPrefix()); 
+    SetValid();
+  }
 
-  void SeekToLast() override { iter_->SeekToLast(); }
+  void SeekToLast() override { 
+    iter_->SeekToLast();
+    SetValid(); 
+  }
 
-  void Next() override { iter_->Next(); }
+  void Next() override { 
+    iter_->Next();
+    SetValid();
+  }
 
-  void Prev() override { iter_->Prev(); }
+  void Prev() override { 
+    iter_->Prev(); 
+    SetValid();
+  }
 
   Slice key() const override { 
-    std::string with_prefix = iter_->key().ToString();
-    Slice a = Slice(with_prefix.substr(cf_.GetPrefixSize()-1));
-    return iter_->key();
+    return Slice(iter_->key().data()+cf_.GetPrefixSize(), iter_->key().size()-cf_.GetPrefixSize());
   }
 
   Slice value() const override {
@@ -261,6 +274,15 @@ public:
 
   Status status() const override { return Status::OK(); }
 
+private:
+
+  void SetValid(){
+    valid_ = iter_->Valid();
+    if(valid_&&memcmp(cf_.cf_name_.c_str(), iter_->key().data(), cf_.GetPrefixSize())!=0){
+      valid_ = false;
+    }
+  }
+  bool valid_;
   Iterator* iter_;
   ColumnFamilyHandle cf_;
 };

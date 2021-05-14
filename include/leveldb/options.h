@@ -184,12 +184,12 @@ struct LEVELDB_EXPORT WriteOptions {
 };
 
 struct ColumnFamilyHandle{
-  ColumnFamilyHandle(std::string cf_name):cf_name_(cf_name){}
+  ColumnFamilyHandle(std::string cf_name):cf_name_(cf_name+"_"){}
   std::string GetPrefix() const {
-    return cf_name_ + "_";
+    return cf_name_;
   }
   int GetPrefixSize() const {
-    return cf_name_.size() + 1;
+    return cf_name_.size();
   }
   std::string cf_name_;
 };

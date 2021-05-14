@@ -24,82 +24,75 @@ TEST(Memtable, get){
   }
 }
 
-// TEST(ColumnFamily, read){
-//   DB *db = nullptr;
-//   Options op;
-//   op.create_if_missing = true;
-//   Status status = DB::Open(op, "testdb_cf", &db);
-//   assert(status.ok());
+TEST(ColumnFamily, read){
+  DB *db = nullptr;
+  Options op;
+  op.create_if_missing = true;
+  Status status = DB::Open(op, "testdb_cf", &db);
+  assert(status.ok());
 
-//   ColumnFamilyHandle cf1("test1");
-//   ColumnFamilyHandle cf2("test2");
+  ColumnFamilyHandle cf1("test1");
+  ColumnFamilyHandle cf2("test2");
 
-//   db->Put(WriteOptions(), cf1, "123", "123");
-//   db->Put(WriteOptions(), cf2, "321", "321");
+  db->Put(WriteOptions(), cf1, "123", "123");
+  db->Put(WriteOptions(), cf2, "321", "321");
 
-//   std::string value;
-//   status = db->Get(ReadOptions(), cf1, "321", &value);
-//   ASSERT_FALSE(status.ok());
-//   status = db->Get(ReadOptions(), cf2, "321", &value);
-//   ASSERT_TRUE(status.ok());
-//   std::cout<<value<<"\n";
+  std::string value;
+  status = db->Get(ReadOptions(), cf1, "321", &value);
+  ASSERT_FALSE(status.ok());
+  status = db->Get(ReadOptions(), cf2, "321", &value);
+  ASSERT_TRUE(status.ok());
+  // std::cout<<value<<"\n";
 
-//   status = db->Get(ReadOptions(), cf2, "123", &value);
-//   ASSERT_FALSE(status.ok());
-//   status = db->Get(ReadOptions(), cf1, "123", &value);
-//   ASSERT_TRUE(status.ok());
-//   std::cout<<value<<"\n";
-//   std::cout<<std::endl;
-// //  auto it = db->NewIterator(ReadOptions());
-// //  for(it->SeekToFirst();it->Valid();it->Next()){
-// //    std::cout<<it->key().ToString()<<","<<it->value().ToString()<<" ";
-// //  }
-// }
+  status = db->Get(ReadOptions(), cf2, "123", &value);
+  ASSERT_FALSE(status.ok());
+  status = db->Get(ReadOptions(), cf1, "123", &value);
+  ASSERT_TRUE(status.ok());
+  // std::cout<<value<<"\n";
+}
 
-// TEST(ColumnFamily, iterator){
-//   DB *db = nullptr;
-//   Options op;
-//   op.create_if_missing = true;
-//   Status status = DB::Open(op, "testdb_cf2", &db);
-//   assert(status.ok());
+TEST(ColumnFamily, iterator){
+  DB *db = nullptr;
+  Options op;
+  op.create_if_missing = true;
+  Status status = DB::Open(op, "testdb_cf2", &db);
+  assert(status.ok());
 
-//   ColumnFamilyHandle cf1("test1");
-//   ColumnFamilyHandle cf2("test2");
+  ColumnFamilyHandle cf1("test1");
+  ColumnFamilyHandle cf2("test2");
 
-//   for(int i=0;i<10;i++){
-//     db->Put(WriteOptions(), cf1, std::to_string(i), std::to_string(i));
-//   }
-//   for(int i=0;i<10;i++){
-//     db->Put(WriteOptions(), cf2, std::to_string(i), std::to_string(i));
-//   }
-// //  db->Get();
-//   std::string value;
-//   db->Get(ReadOptions(), cf1, std::to_string(3), &value);
-//   ASSERT_EQ(value, "3");
+  for(int i=0;i<10;i++){
+    db->Put(WriteOptions(), cf1, std::to_string(i), std::to_string(i));
+  }
+  for(int i=10;i<20;i++){
+    db->Put(WriteOptions(), cf2, std::to_string(i), std::to_string(i));
+  }
 
-//   Iterator* iter2 = db->NewColumnFamilyIterator(ReadOptions(), cf2);
+  Iterator* iter1 = db->NewColumnFamilyIterator(ReadOptions(), cf1);
+  iter1->SeekToFirst();
+  ASSERT_EQ(Slice("0").ToString(), iter1->key().ToString());
 
-//   iter2->SeekToFirst();
-//   ASSERT_EQ(Slice("test2_0"), iter2->key());
+  Iterator* iter2 = db->NewColumnFamilyIterator(ReadOptions(), cf2);
+  iter2->SeekToFirst();
+  ASSERT_EQ(Slice("10"), iter2->key());
 
-//   for(;iter2->Valid();iter2->Next()){
-//     std::cout<<iter2->key().ToString()<<","<<iter2->value().ToString()<<" ";
-//   }
-//   std::cout<<std::endl;
-// //  auto it = db->NewIterator(ReadOptions());
-// //  for(it->SeekToFirst();it->Valid();it->Next()){
-// //    std::cout<<it->key().ToString()<<","<<it->value().ToString()<<" ";
-// //  }
+  // for(;iter2->Valid();iter2->Next()){
+  //   std::cout<<iter2->key().ToString()<<","<<iter2->value().ToString()<<" ";
+  // }
+  // std::cout<<std::endl;
 
-// //  Iterator* iter1 = db->NewColumnFamilyIterator(ReadOptions(), cf1);
-// //  iter1->SeekToFirst();
-// //  ASSERT_EQ(Slice("test1_0"), iter2->key());
-// }
+  Iterator* it = db->NewIterator(ReadOptions());
+  it->SeekToFirst();
+  ASSERT_EQ(Slice("test1_0").ToString(), it->key().ToString());
+  // for(;it->Valid();it->Next()){
+  //   std::cout<<it->key().ToString()<<","<<it->value().ToString()<<" ";
+  // }
+}
 
 
 int main() {
-//  system("rm -rf ./testdb*");
-//  usleep(100);
+ system("rm -rf ./testdb*");
+ usleep(100);
  testing::InitGoogleTest();
  return RUN_ALL_TESTS();
 
