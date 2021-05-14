@@ -148,6 +148,21 @@ class LEVELDB_EXPORT DB {
   // Therefore the following call will compact the entire database:
   //    db->CompactRange(nullptr, nullptr);
   virtual void CompactRange(const Slice* begin, const Slice* end) = 0;
+
+  // 创建ColumnFamily
+  virtual Status CreateColumnFamily(std::string cf_name, ColumnFamilyHandle& cf) = 0;
+
+  virtual Status Put(const WriteOptions& options, ColumnFamilyHandle& cf, const Slice& key,
+                     const Slice& value) = 0;
+
+  virtual Status Get(const ReadOptions& options, ColumnFamilyHandle& cf,const Slice& key,
+                     std::string* value) = 0;
+
+  virtual Iterator* NewColumnFamilyIterator(const ReadOptions& options, ColumnFamilyHandle &cf) = 0;
+
+  virtual Status PutWithIndex(const WriteOptions& options, const Slice& key, const Slice& value) = 0;
+
+  virtual Iterator* NewIndexIterator(const ReadOptions& options) = 0;                  
 };
 
 // Destroy the contents of the specified database.

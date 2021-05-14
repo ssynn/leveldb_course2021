@@ -699,7 +699,7 @@ void DBImpl::BackgroundCompaction() {
   mutex_.AssertHeld();
 
   if (imm_ != nullptr) {
-    CompactMemTable();
+    CompactMemTable(); 
     return;
   }
 
@@ -1533,6 +1533,36 @@ void DBImpl::GetApproximateSizes(const Range* range, int n, uint64_t* sizes) {
 
   v->Unref();
 }
+ Status DBImpl::CreateColumnFamily(const std::string cf_name,
+                                   ColumnFamilyHandle& cf) {
+   ColumnFamilyHandle cf_t(cf_name);
+   cf = cf_t;
+   return Status::OK();
+ }
+ Status DBImpl::Put(const WriteOptions& options, ColumnFamilyHandle& cf,
+                    const Slice& key, const Slice& value) {
+   return Put(options, cf.GetPrefix()+key.ToString(), value);
+ }
+ Status DBImpl::Get(const ReadOptions& options, ColumnFamilyHandle& cf,
+                    const Slice& key, std::string* value) {
+   return Get(options, cf.GetPrefix()+key.ToString(), value);
+ }
+
+ Iterator* DBImpl::NewColumnFamilyIterator(const ReadOptions& options,
+                                        ColumnFamilyHandle& cf) {
+
+   return new ColumnFamilyIterator(cf, NewIterator(options));
+ }
+
+ Status DBImpl::PutWithIndex(const WriteOptions& options, const Slice& key,
+                             const Slice& value) {
+   return Status();
+ }
+
+ Iterator* DBImpl::NewIndexIterator(const ReadOptions& options) {
+   return nullptr;
+ }
+
 
 // Default implementations of convenience methods that subclasses of DB
 // can call if they wish

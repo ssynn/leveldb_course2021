@@ -51,6 +51,20 @@ class DBImpl : public DB {
   void GetApproximateSizes(const Range* range, int n, uint64_t* sizes) override;
   void CompactRange(const Slice* begin, const Slice* end) override;
 
+  Status CreateColumnFamily(std::string cf_name, ColumnFamilyHandle& cf) override;
+
+  Status Put(const WriteOptions& options, ColumnFamilyHandle& cf, const Slice& key,
+                     const Slice& value) override;
+
+  Status Get(const ReadOptions& options, ColumnFamilyHandle& cf,const Slice& key,
+                     std::string* value) override;
+
+  Iterator* NewColumnFamilyIterator(const ReadOptions& options, ColumnFamilyHandle &cf) override;
+
+  Status PutWithIndex(const WriteOptions& options, const Slice& key, const Slice& value) override;
+
+  Iterator* NewIndexIterator(const ReadOptions& options) override;
+
   // Extra methods (for testing) that are not in the public DB interface
 
   // Compact any files in the named level that overlap [*begin,*end]
@@ -213,6 +227,53 @@ Options SanitizeOptions(const std::string& db,
                         const InternalKeyComparator* icmp,
                         const InternalFilterPolicy* ipolicy,
                         const Options& src);
+
+class ColumnFamilyIterator: public Iterator{
+private:
+  /* data */
+public:
+  ColumnFamilyIterator(ColumnFamilyHandle &cf, Iterator *iter):iter_(iter), cf_(cf){};
+  ~ColumnFamilyIterator(){
+    delete iter_;
+  }
+
+  bool Valid() const override { return iter_->Valid(); }
+
+  void Seek(const Slice& k) override { iter_->Seek(cf_.GetPrefix()+k.ToString()); }
+
+  void SeekToFirst() override { iter_->Seek(cf_.GetPrefix()); }
+
+  void SeekToLast() override { iter_->SeekToLast(); }
+
+  void Next() override { iter_->Next(); }
+
+  void Prev() override { iter_->Prev(); }
+
+  Slice key() const override { 
+    std::string with_prefix = iter_->key().ToString();
+    Slice a = Slice(with_prefix.substr(cf_.GetPrefixSize()-1));
+    return iter_->key();
+  }
+
+  Slice value() const override {
+    return iter_->value();
+  }
+
+  Status status() const override { return Status::OK(); }
+
+  Iterator* iter_;
+  ColumnFamilyHandle cf_;
+};
+
+
+class IndexIterator: public Iterator{
+  public:
+   explicit IndexIterator(){
+
+   }
+
+  Iterator* iter_;
+};
 
 }  // namespace leveldb
 

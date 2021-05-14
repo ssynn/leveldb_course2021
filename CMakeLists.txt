@@ -536,3 +536,8 @@ add_executable(db_test9
         "${PROJECT_SOURCE_DIR}/test/db_test9.cc"
         )
 target_link_libraries(db_test9 leveldb gtest)
+
+add_executable(db_test10
+        "${PROJECT_SOURCE_DIR}/test/db_test10.cc"
+        )
+target_link_libraries(db_test10 leveldb gtest)

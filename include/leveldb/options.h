@@ -6,7 +6,7 @@
 #define STORAGE_LEVELDB_INCLUDE_OPTIONS_H_
 
 #include <stddef.h>
-
+#include <string>
 #include "leveldb/export.h"
 
 namespace leveldb {
@@ -181,6 +181,17 @@ struct LEVELDB_EXPORT WriteOptions {
   // with sync==true has similar crash semantics to a "write()"
   // system call followed by "fsync()".
   bool sync = false;
+};
+
+struct ColumnFamilyHandle{
+  ColumnFamilyHandle(std::string cf_name):cf_name_(cf_name){}
+  std::string GetPrefix() const {
+    return cf_name_ + "_";
+  }
+  int GetPrefixSize() const {
+    return cf_name_.size() + 1;
+  }
+  std::string cf_name_;
 };
 
 }  // namespace leveldb
