@@ -140,6 +140,7 @@ TEST(Memtable, get_with_index){
   for(int i=0;i<length;i++){
     status = db->Get(ReadOptions(), std::to_string(i), &value);
     ASSERT_TRUE(status.ok());
+    ASSERT_EQ(value, std::to_string(i));
   }
   std::cout<<"Read with index: "<<GetUnixTimeUs()-start<<"us\n";
 }
@@ -164,6 +165,7 @@ TEST(Memtable, get_without_index){
   for(int i=0;i<length;i++){
     status = db->Get(ReadOptions(), std::to_string(i), &value);
     ASSERT_TRUE(status.ok());
+    ASSERT_EQ(value, std::to_string(i));
   }
   std::cout<<"Read without index: "<<GetUnixTimeUs()-start<<"us\n";
 }
@@ -393,5 +395,4 @@ int main() {
  usleep(100);
  testing::InitGoogleTest();
  return RUN_ALL_TESTS();
-
 }
