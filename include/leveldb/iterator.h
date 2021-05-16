@@ -18,6 +18,7 @@
 #include "leveldb/export.h"
 #include "leveldb/slice.h"
 #include "leveldb/status.h"
+#include "leveldb/options.h"
 
 namespace leveldb {
 
@@ -106,6 +107,141 @@ LEVELDB_EXPORT Iterator* NewEmptyIterator();
 
 // Return an empty iterator with the specified status.
 LEVELDB_EXPORT Iterator* NewErrorIterator(const Status& status);
+
+
+class ColumnFamilyIterator: public Iterator{
+private:
+  /* data */
+public:
+  ColumnFamilyIterator(ColumnFamilyHandle &cf, Iterator *iter):valid_(false),iter_(iter), cf_(cf){};
+  ~ColumnFamilyIterator(){
+    delete iter_;
+  }
+
+  bool Valid() const override { return valid_; }
+
+  void Seek(const Slice& k) override { 
+    iter_->Seek(cf_.GetPrefix()+k.ToString()); 
+    SetValid();
+  }
+
+  void SeekToFirst() override { 
+    iter_->Seek(cf_.GetPrefix()); 
+    SetValid();
+  }
+
+  void SeekToLast() override { 
+    iter_->SeekToLast();
+    SetValid(); 
+  }
+
+  void Next() override { 
+    iter_->Next();
+    SetValid();
+  }
+
+  void Prev() override { 
+    iter_->Prev(); 
+    SetValid();
+  }
+
+  Slice key() const override { 
+    return Slice(iter_->key().data()+cf_.GetPrefixSize(), iter_->key().size()-cf_.GetPrefixSize());
+  }
+
+  Slice value() const override {
+    return iter_->value();
+  }
+
+  Status status() const override { return Status::OK(); }
+
+private:
+
+  void SetValid(){
+    valid_ = iter_->Valid();
+    if(valid_&&memcmp(cf_.cf_name_.c_str(), iter_->key().data(), cf_.GetPrefixSize())!=0){
+      valid_ = false;
+    }
+  }
+  bool valid_;
+  Iterator* iter_;
+  ColumnFamilyHandle cf_;
+};
+
+class IndexIterator: public Iterator{
+public:
+  explicit IndexIterator(Iterator* iter):valid_(false),cf_("Index"),iter_(iter){
+  }
+  ~IndexIterator(){
+    delete iter_;
+  }
+
+  bool Valid() const override { return valid_; }
+
+  void Seek(const Slice& k) override { 
+    char key[9] = "00000000";
+    for(int i=0;i<k.size();i++){
+      key[7-i] = k[k.size()-1-i];
+    }
+    iter_->Seek(cf_.GetPrefix()+key); 
+    SetValid();
+  }
+
+  void SeekToFirst() override { 
+    iter_->Seek(cf_.GetPrefix()); 
+    SetValid();
+  }
+
+  void SeekToLast() override { 
+    iter_->SeekToLast();
+    SetValid(); 
+  }
+
+  void Next() override { 
+    iter_->Next();
+    SetValid();
+  }
+
+  void Prev() override { 
+    iter_->Prev(); 
+    SetValid();
+  }
+
+  Slice key() const override { 
+    assert(valid_);
+    const char* pos = iter_->key().data()+cf_.GetPrefixSize();
+    int start = GetIntPos(pos, 8);
+    return Slice(pos+start, 8-start);
+  }
+
+  Slice value() const override {
+    assert(valid_);
+    const char* pos = iter_->key().data()+cf_.GetPrefixSize()+9;
+    int start = GetIntPos(pos, 8);
+    return Slice(pos+start, 8-start);
+  }
+
+  Status status() const override { return Status::OK(); }
+
+  // 从定长的数字字符串编码中找到第一位的起始位置
+  static int GetIntPos(const char* start, int size){
+    int i = 0; 
+    while(i < size&&start[i++]=='0') {}
+    return i-1;
+  }
+
+private:
+  void SetValid(){
+    valid_ = iter_->Valid();
+    if(valid_&&memcmp(cf_.cf_name_.c_str(), iter_->key().data(), cf_.GetPrefixSize())!=0){
+      valid_ = false;
+    }
+  }
+  bool valid_;
+  ColumnFamilyHandle cf_;
+  Iterator* iter_;
+};
+
 
 }  // namespace leveldb
 

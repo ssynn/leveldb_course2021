@@ -148,7 +148,9 @@ DBImpl::DBImpl(const Options& raw_options, const std::string& dbname)
       background_compaction_scheduled_(false),
       manual_compaction_(nullptr),
       versions_(new VersionSet(dbname_, &options_, table_cache_,
-                               &internal_comparator_)) {}
+                               &internal_comparator_)),
+      cf_index_("Index"),
+      cf_record_("Record") {}
 
 DBImpl::~DBImpl() {
   // Wait for background work to finish.
@@ -1533,34 +1535,50 @@ void DBImpl::GetApproximateSizes(const Range* range, int n, uint64_t* sizes) {
 
   v->Unref();
 }
- Status DBImpl::CreateColumnFamily(const std::string cf_name,
-                                   ColumnFamilyHandle& cf) {
-   ColumnFamilyHandle cf_t(cf_name);
-   cf = cf_t;
-   return Status::OK();
- }
- Status DBImpl::Put(const WriteOptions& options, ColumnFamilyHandle& cf,
-                    const Slice& key, const Slice& value) {
-   return Put(options, cf.GetPrefix()+key.ToString(), value);
- }
- Status DBImpl::Get(const ReadOptions& options, ColumnFamilyHandle& cf,
-                    const Slice& key, std::string* value) {
-   return Get(options, cf.GetPrefix()+key.ToString(), value);
- }
 
- Iterator* DBImpl::NewColumnFamilyIterator(const ReadOptions& options,
-                                        ColumnFamilyHandle& cf) {
+Status DBImpl::CreateColumnFamily(const std::string cf_name,
+                                  ColumnFamilyHandle& cf) {
+  ColumnFamilyHandle cf_t(cf_name);
+  cf = cf_t;
+  return Status::OK();
+}
 
-   return new ColumnFamilyIterator(cf, NewIterator(options));
- }
+Status DBImpl::Put(const WriteOptions& options, ColumnFamilyHandle& cf,
+                   const Slice& key, const Slice& value) {
+  return Put(options, cf.GetPrefix()+key.ToString(), value);
+}
 
- Status DBImpl::PutWithIndex(const WriteOptions& options, const Slice& key,
-                             const Slice& value) {
-   return Status();
- }
+Status DBImpl::Get(const ReadOptions& options, ColumnFamilyHandle& cf,
+                   const Slice& key, std::string* value) {
+  return Get(options, cf.GetPrefix()+key.ToString(), value);
+}
+
+Iterator* DBImpl::NewColumnFamilyIterator(const ReadOptions& options,
+                                       ColumnFamilyHandle& cf) {
+  return new ColumnFamilyIterator(cf, NewIterator(options));
+}
+
+Status DBImpl::PutWithIndex(const WriteOptions& options, const Slice& key,
+                            const Slice& value) {
+  // 这里的Key Value都为固定的8字节长度
+  char value_key[18] = "00000000_00000000";
+  for(int i=0;i<key.size();i++){
+    value_key[16-i] = key[key.size()-1-i];
+  }
+  for(int i=0;i<value.size();i++){
+    value_key[7-i] = value[value.size()-1-i];
+  }
+  // 插入记录
+  Put(options, cf_record_, Slice(value_key+9, 8), Slice(value_key, 8));
+
+  // 插入索引
+  Put(options, cf_index_, Slice(value_key, 17), "");
+  
+  return Status::OK();
+}
 
  Iterator* DBImpl::NewIndexIterator(const ReadOptions& options) {
-   return nullptr;
+   return new IndexIterator(NewIterator(options));
  }
 
 

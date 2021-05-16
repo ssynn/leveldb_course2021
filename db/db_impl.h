@@ -219,6 +219,9 @@ class DBImpl : public DB {
   Status bg_error_ GUARDED_BY(mutex_);
 
   CompactionStats stats_[config::kNumLevels] GUARDED_BY(mutex_);
+
+  ColumnFamilyHandle cf_index_;
+  ColumnFamilyHandle cf_record_;
 };
 
 // Sanitize db options.  The caller should delete result.info_log if
@@ -227,75 +230,6 @@ Options SanitizeOptions(const std::string& db,
                         const InternalKeyComparator* icmp,
                         const InternalFilterPolicy* ipolicy,
                         const Options& src);
-
-class ColumnFamilyIterator: public Iterator{
-private:
-  /* data */
-public:
-  ColumnFamilyIterator(ColumnFamilyHandle &cf, Iterator *iter):valid_(false),iter_(iter), cf_(cf){};
-  ~ColumnFamilyIterator(){
-    delete iter_;
-  }
-
-  bool Valid() const override { return valid_; }
-
-  void Seek(const Slice& k) override { 
-    iter_->Seek(cf_.GetPrefix()+k.ToString()); 
-    SetValid();
-  }
-
-  void SeekToFirst() override { 
-    iter_->Seek(cf_.GetPrefix()); 
-    SetValid();
-  }
-
-  void SeekToLast() override { 
-    iter_->SeekToLast();
-    SetValid(); 
-  }
-
-  void Next() override { 
-    iter_->Next();
-    SetValid();
-  }
-
-  void Prev() override { 
-    iter_->Prev(); 
-    SetValid();
-  }
-
-  Slice key() const override { 
-    return Slice(iter_->key().data()+cf_.GetPrefixSize(), iter_->key().size()-cf_.GetPrefixSize());
-  }
-
-  Slice value() const override {
-    return iter_->value();
-  }
-
-  Status status() const override { return Status::OK(); }
-
-private:
-
-  void SetValid(){
-    valid_ = iter_->Valid();
-    if(valid_&&memcmp(cf_.cf_name_.c_str(), iter_->key().data(), cf_.GetPrefixSize())!=0){
-      valid_ = false;
-    }
-  }
-  bool valid_;
-  Iterator* iter_;
-  ColumnFamilyHandle cf_;
-};
-
-
-class IndexIterator: public Iterator{
-  public:
-   explicit IndexIterator(){
-
-   }
-
-  Iterator* iter_;
-};
 
 }  // namespace leveldb
 
