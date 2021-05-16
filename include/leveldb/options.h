@@ -35,6 +35,8 @@ struct LEVELDB_EXPORT Options {
   Options();
 
   bool display_kv = false;
+
+  bool with_hashmap = false;
   // -------------------
   // Parameters that affect behavior
 

@@ -436,7 +436,7 @@ Status DBImpl::RecoverLogFile(uint64_t log_number, bool last_log,
     WriteBatchInternal::SetContents(&batch, record);
 
     if (mem == nullptr) {
-      mem = new MemTable(internal_comparator_);
+      mem = new MemTable(internal_comparator_, options_.with_hashmap);
       mem->Ref();
     }
     status = WriteBatchInternal::InsertInto(&batch, mem);
@@ -482,7 +482,7 @@ Status DBImpl::RecoverLogFile(uint64_t log_number, bool last_log,
         mem = nullptr;
       } else {
         // mem can be nullptr if lognum exists but was empty.
-        mem_ = new MemTable(internal_comparator_);
+        mem_ = new MemTable(internal_comparator_, options_.with_hashmap);
         mem_->Ref();
       }
     }
@@ -1447,7 +1447,7 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       log_ = new log::Writer(lfile);
       imm_ = mem_;
       has_imm_.store(true, std::memory_order_release);
-      mem_ = new MemTable(internal_comparator_);
+      mem_ = new MemTable(internal_comparator_, options_.with_hashmap);
       mem_->Ref();
       force = false;  // Do not force another compaction if have room
       MaybeScheduleCompaction();
@@ -1618,7 +1618,7 @@ Status DB::Open(const Options& options, const std::string& dbname, DB** dbptr) {
       impl->logfile_ = lfile;
       impl->logfile_number_ = new_log_number;
       impl->log_ = new log::Writer(lfile);
-      impl->mem_ = new MemTable(impl->internal_comparator_);
+      impl->mem_ = new MemTable(impl->internal_comparator_, options.with_hashmap);
       impl->mem_->Ref();
     }
   }

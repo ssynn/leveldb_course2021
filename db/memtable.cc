@@ -21,6 +21,9 @@ static Slice GetLengthPrefixedSlice(const char* data) {
 MemTable::MemTable(const InternalKeyComparator& comparator)
     : comparator_(comparator), refs_(0), table_(comparator_, &arena_) {}
 
+MemTable::MemTable(const InternalKeyComparator& comparator, bool with_hashmap)
+    : comparator_(comparator), refs_(0), table_(comparator_, &arena_, with_hashmap) {}
+
 MemTable::~MemTable() { assert(refs_ == 0); }
 
 size_t MemTable::ApproximateMemoryUsage() { return arena_.MemoryUsage(); }

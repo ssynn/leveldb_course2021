@@ -32,6 +32,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 #include "util/arena.h"
 #include "util/random.h"
@@ -50,6 +51,8 @@ class SkipList {
   // and will allocate memory using "*arena".  Objects allocated in the arena
   // must remain allocated for the lifetime of the skiplist object.
   explicit SkipList(Comparator cmp, Arena* arena);
+
+  explicit SkipList(Comparator cmp, Arena* arena, bool with_hashmap);
 
   SkipList(const SkipList&) = delete;
   SkipList& operator=(const SkipList&) = delete;
@@ -146,6 +149,8 @@ class SkipList {
 
   // Read/written only by Insert().
   Random rnd_;
+  bool with_hashmap_;
+  std::unordered_map<std::string, Node*>hashmap_;
 };
 
 // Implementation details follow
@@ -233,6 +238,22 @@ inline void SkipList<Key, Comparator>::Iterator::Prev() {
 
 template <typename Key, class Comparator>
 inline void SkipList<Key, Comparator>::Iterator::Seek(const Key& target) {
+  if(list_->with_hashmap_){
+    uint32_t key_length;
+    const char *key_t = GetVarint32Ptr((char*)target, (char*)target + 5, &key_length);
+    std::string map_key(key_t, key_length-8);
+//    std::unordered_map<std::string, Node*>::iterator* it = list_->hashmap_.find(map_key);
+    Node* t=nullptr;
+    auto it = list_->hashmap_.find(map_key);
+    if(it !=list_->hashmap_.end()){
+      t = it->second;
+      while (list_->compare_(t->key, target) < 0){
+        t = t->Next(0);
+      }
+    }
+    node_ = t;
+    return;
+  }
   node_ = list_->FindGreaterOrEqual(target, nullptr);
 }
 
@@ -335,12 +356,29 @@ typename SkipList<Key, Comparator>::Node* SkipList<Key, Comparator>::FindLast()
 }
 
 template <typename Key, class Comparator>
+SkipList<Key, Comparator>::SkipList(Comparator cmp, Arena* arena, bool with_hashmap)
+    : compare_(cmp),
+      arena_(arena),
+      head_(NewNode(0 /* any key will do */, kMaxHeight)),
+      max_height_(1),
+      rnd_(0xdeadbeef),
+      with_hashmap_(with_hashmap),
+      hashmap_() {
+  for (int i = 0; i < kMaxHeight; i++) {
+    head_->SetNext(i, nullptr);
+  }
+}
+
+
+template <typename Key, class Comparator>
 SkipList<Key, Comparator>::SkipList(Comparator cmp, Arena* arena)
     : compare_(cmp),
       arena_(arena),
       head_(NewNode(0 /* any key will do */, kMaxHeight)),
       max_height_(1),
-      rnd_(0xdeadbeef) {
+      rnd_(0xdeadbeef),
+      with_hashmap_(false),
+      hashmap_() {
   for (int i = 0; i < kMaxHeight; i++) {
     head_->SetNext(i, nullptr);
   }
@@ -378,6 +416,13 @@ void SkipList<Key, Comparator>::Insert(const Key& key) {
     // we publish a pointer to "x" in prev[i].
     x->NoBarrier_SetNext(i, prev[i]->NoBarrier_Next(i));  // set next of x
     prev[i]->SetNext(i, x);                               // set pre of x
+  }
+
+  if(with_hashmap_){
+    uint32_t key_length;
+    const char *key_t = GetVarint32Ptr((char*)key, (char*)key + 5, &key_length);
+    std::string map_key(key_t, key_length-8);
+    hashmap_[map_key] = x; 
   }
 //  PrintTable();
 }

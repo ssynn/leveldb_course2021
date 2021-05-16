@@ -14,16 +14,158 @@ static inline int64_t GetUnixTimeUs() {
     return (((int64_t) tp.tv_sec) * 1000000 + (int64_t) tp.tv_usec);
 }
 
-TEST(Memtable, get){
+// 这里测试当字符串被释放掉后，下次传入同样的字符串是否能找到
+TEST(unordered_map, insert_and_get){
+  std::unordered_map<const char*, int>ump;
+
+#if 0
+  // 测试同地址不同数据
+  char* b = new char[10]();
+  for(int i=0;i<10;i++){
+    memset(b, 0, 10);
+    b[0] = 'a'+i;
+    b[1] = 'a'+i;
+    b[3] = 'a'+i;
+    ump[b] = i;
+  }
+
+  for(int i=0;i<10;i++){
+    memset(b, 0, 10);
+    b[0] = 'a'+i;
+    b[1] = 'a'+i;
+    b[3] = 'a'+i;
+    ASSERT_EQ(ump[b], i);
+  }
+  // 结论，unordered_map不会复制一份const char*的数据
+#endif
+
+#if 0
+  // 测试不同地址相同数据
+  std::unordered_map<const char*, int>ump2;
+  char* a0 = new char[10]();
+  char* a1 = new char[10]();
+  char* a2 = new char[10]();
+
+  for(int i=0;i<3;i++){
+    a0[i] = 'a';
+    a1[i] = 'a';
+    a2[i] = 'a';
+  }
+  std::cout<<a0<<" "<<a1<<" "<<a2<<"\n";
+  ASSERT_EQ(*a0, *a1);
+  ASSERT_EQ(*a1, *a2);
+  ump2[a0] = 11;
+  ASSERT_EQ(ump2[a0], ump2[a1]);
+  ASSERT_EQ(ump2[a1], ump2[a2]);
+  // 还是不行呀
+#endif
+
+  // 算了还是用string吧
+  std::unordered_map<std::string, int>ump3;
+  char* a0 = new char[10]();
+  char* a1 = new char[10]();
+  char* a2 = new char[10]();
+
+  for(int i=0;i<3;i++){
+    a0[i] = 'a';
+    a1[i] = 'a';
+    a2[i] = 'a';
+  }
+  // std::cout<<a0<<" "<<a1<<" "<<a2<<"\n";
+  std::string b0(a0, 3);
+  std::string b1(a1, 3);
+  std::string b2(a2, 3);
+  delete []a0;
+  delete []a1;
+  delete []a2;
+  ASSERT_EQ(b0, b1);
+  ASSERT_EQ(b1, b2);
+  ump3[b0] = 11;
+  ASSERT_EQ(ump3[b0], ump3[b1]);
+  ASSERT_EQ(ump3[b1], ump3[b2]);
+  // 还是string靠谱
+}
+
+#if 0
+TEST(Map, unordered_mapVSmap){
+  std::unordered_map<const char*, int>ump;
+  std::map<const char*, int>mp;
+  for (size_t i = 0; i < 10000; i++)
+  {
+    ump[std::to_string(i).c_str()] = i;
+  }
+
+  for (size_t i = 0; i < 10000; i++)
+  {
+    mp[std::to_string(i).c_str()] = i;
+  }
+
+    int size = 4000*512;
+    uint64_t* data = new uint64_t[size]();
+    uint64_t start = GetUnixTimeUs();
+    for (size_t i = 0; i < size; i++)
+    {
+      data[i] &= 1;
+    }
+    std::cout<<"unordered_map"<<GetUnixTimeUs()-start<<"us\n";
+
+  start = GetUnixTimeUs();
+  for (size_t i = 0; i < 10000; i++)
+  {
+    mp.find(std::to_string(i).c_str());
+  }
+  std::cout<<"map"<<GetUnixTimeUs()-start<<"us\n";
+
+}
+#endif
+
+
+TEST(Memtable, get_with_index){
   DB *db = nullptr;
   Options op;
+  op.write_buffer_size = 1<<24;
   op.create_if_missing = true;
-  Status status = DB::Open(op, "testdb_read_sstable", &db);
+  op.with_hashmap = true;
+  Status status = DB::Open(op, "testdb_memtable", &db);
   assert(status.ok());
 
-  for(int i=0;i<50000;i++){
+  int length = 100000;
+
+  for(int i=0;i<length;i++){
     db->Put(WriteOptions(), std::to_string(i), std::to_string(i));
   }
+
+  uint64_t start = GetUnixTimeUs();
+  std::string value;
+  for(int i=0;i<length;i++){
+    status = db->Get(ReadOptions(), std::to_string(i), &value);
+    ASSERT_TRUE(status.ok());
+  }
+  std::cout<<"Read with index: "<<GetUnixTimeUs()-start<<"us\n";
+}
+
+TEST(Memtable, get_without_index){
+  DB *db = nullptr;
+  Options op;
+  op.write_buffer_size = 1<<24;
+  op.create_if_missing = true;
+  op.with_hashmap = false;
+  Status status = DB::Open(op, "testdb_memtable_noidx", &db);
+  assert(status.ok());
+
+  int length = 100000;
+
+  for(int i=0;i<length;i++){
+    db->Put(WriteOptions(), std::to_string(i), std::to_string(i));
+  }
+
+  uint64_t start = GetUnixTimeUs();
+  std::string value;
+  for(int i=0;i<length;i++){
+    status = db->Get(ReadOptions(), std::to_string(i), &value);
+    ASSERT_TRUE(status.ok());
+  }
+  std::cout<<"Read without index: "<<GetUnixTimeUs()-start<<"us\n";
 }
 
 TEST(ColumnFamily, read){
@@ -103,7 +245,7 @@ TEST(ColumnFamily, iterator){
   it->SeekToFirst();
   ASSERT_EQ(Slice("test1_0").ToString(), it->key().ToString());
 
-#ifdef SHOW_DATA
+#if SHOW_DATA
   for(;it->Valid();it->Next()){
     std::cout<<it->key().ToString()<<","<<it->value().ToString()<<" ";
   }
@@ -252,36 +394,4 @@ int main() {
  testing::InitGoogleTest();
  return RUN_ALL_TESTS();
 
-
-//  std::unordered_map<const char*, int>ump;
-//  std::map<const char*, int>mp;
-//
-//  for (size_t i = 0; i < 10000; i++)
-//  {
-//    ump[std::to_string(i).c_str()] = i;
-//  }
-//
-//  for (size_t i = 0; i < 10000; i++)
-//  {
-//    mp[std::to_string(i).c_str()] = i;
-//  }
-//
-  // int size = 4000*512;
-  // uint64_t* data = new uint64_t[size]();
-  // uint64_t start = GetUnixTimeUs();
-  // for (size_t i = 0; i < size; i++)
-  // {
-  //   data[i] &= 1;
-  //   //  ump.find(std::to_string(i).c_str());
-  // }
-  // std::cout<<"unordered_map"<<GetUnixTimeUs()-start<<"us\n";
-//
-//  start = GetUnixTimeUs();
-//  for (size_t i = 0; i < 10000; i++)
-//  {
-//    mp.find(std::to_string(i).c_str());
-//  }
-//  std::cout<<"map"<<GetUnixTimeUs()-start<<"us\n";
-//
-//  return 0;
 }

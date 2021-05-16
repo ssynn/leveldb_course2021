@@ -23,6 +23,8 @@ class MemTable {
   // is zero and the caller must call Ref() at least once.
   explicit MemTable(const InternalKeyComparator& comparator);
 
+  explicit MemTable(const InternalKeyComparator& comparator, bool with_hashmap);
+
   MemTable(const MemTable&) = delete;
   MemTable& operator=(const MemTable&) = delete;
 
