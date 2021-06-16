@@ -120,7 +120,7 @@ TEST(Map, unordered_mapVSmap){
 #endif
 
 
-TEST(Memtable, get_with_index){
+TEST(Memtable, get_with_hashmap){
   DB *db = nullptr;
   Options op;
   op.write_buffer_size = 1<<24;
@@ -145,7 +145,7 @@ TEST(Memtable, get_with_index){
   std::cout<<"Read with index: "<<GetUnixTimeUs()-start<<"us\n";
 }
 
-TEST(Memtable, get_without_index){
+TEST(Memtable, get_without_hashmap){
   DB *db = nullptr;
   Options op;
   op.write_buffer_size = 1<<24;

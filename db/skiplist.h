@@ -91,7 +91,7 @@ class SkipList {
     void Prev();
 
     // Advance to the first entry with a key >= target
-    void Seek(const Key& target);
+    void Seek(const Key& target, bool point_get=false);
 
     // Position at the first entry in list.
     // Final state of iterator is Valid() iff list is not empty.
@@ -237,7 +237,7 @@ inline void SkipList<Key, Comparator>::Iterator::Prev() {
 }
 
 template <typename Key, class Comparator>
-inline void SkipList<Key, Comparator>::Iterator::Seek(const Key& target) {
+inline void SkipList<Key, Comparator>::Iterator::Seek(const Key& target, bool point_get) {
   if(list_->with_hashmap_){
     uint32_t key_length;
     const char *key_t = GetVarint32Ptr((char*)target, (char*)target + 5, &key_length);
@@ -252,7 +252,7 @@ inline void SkipList<Key, Comparator>::Iterator::Seek(const Key& target) {
       }
     }
     node_ = t;
-    return;
+    if(point_get || node_ != nullptr) return;
   }
   node_ = list_->FindGreaterOrEqual(target, nullptr);
 }

@@ -104,7 +104,7 @@ void MemTable::Add(SequenceNumber s, ValueType type, const Slice& key,
 bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
   Slice memkey = key.memtable_key();
   Table::Iterator iter(&table_);
-  iter.Seek(memkey.data());
+  iter.Seek(memkey.data(), true);
   if (iter.Valid()) {
     // entry format is:
     //    klength  varint32
