@@ -4,10 +4,13 @@
 #include <memory>
 
 #include "leveldb/cache.h"
+#include "leveldb/env.h"
 
 #include "pthread.h"
 #include "random"
 #include "sys/time.h"
+#include "thread"
+#include "chrono"
 
 std::string cache_name = "leveldb";
 double FLAGS_factor = 1.0;
@@ -453,7 +456,7 @@ char *createValue(Random64 &rnd) {
 }
 
 void deleter(const leveldb::Slice &key, void *value) {
-  fprintf(stdout, "delete handle key=%s", key.data());
+//  fprintf(stdout, "delete handle key=%s\n", key.data());
   delete[] static_cast<char *>(value);
 }
 
@@ -461,7 +464,7 @@ static void* EncodeValue(uintptr_t v) { return reinterpret_cast<void*>(v); }
 
 class TestCache {
  public:
-  TestCache(size_t size):size_(size), cnt_(0), cache_(leveldb::NewLRUCache(size*FLAGS_factor)){}
+  TestCache(size_t size):size_(size), cnt_(0), cache_(leveldb::NewLRUCache(size)){}
   bool Get(uint64_t key){
     char key_data[FLAGS_key_size];
     for (int i = 1; i <= FLAGS_key_size; ++i) {
@@ -484,7 +487,7 @@ class TestCache {
     }
     auto k = leveldb::Slice(key_data, FLAGS_key_size);
     auto handle = cache_->Insert(k, nullptr, 1, &deleter);
-    if(handle == nullptr){
+    if(handle != nullptr){
       cache_->Release(handle);
       return false;
     }
@@ -498,7 +501,7 @@ class TestCache {
   }
 
   size_t GetSize(){
-    return size_;
+    return cache_->TotalCharge();
   }
 
   ~TestCache(){}
@@ -512,12 +515,12 @@ class CacheBench {
 
  public:
   CacheBench() : max_key_(0){
-    max_key_ = FLAGS_cache_size * 10 / FLAGS_hit_rate;
+    max_key_ = FLAGS_cache_size / FLAGS_hit_rate;
     // FIXME: choose cache
     cache_ = std::make_shared<TestCache>(FLAGS_cache_size);
 
     if (FLAGS_ops_per_thread == 0) {
-      FLAGS_ops_per_thread = max_key_ * 5;
+      FLAGS_ops_per_thread = max_key_ * 10;
 //      FLAGS_ops_per_thread = FLAGS_op_num / FLAGS_threads;
     }
   }
@@ -528,7 +531,6 @@ class CacheBench {
     Random64 rnd(1);
     KeyGen keygen;
     for (uint64_t i = 0; i < FLAGS_cache_size; i++) {
-//      Slice key = keygen.GetRand(rnd, max_key_);
       cache_->Set(i);
     }
   }
@@ -626,6 +628,7 @@ class CacheBench {
       bool ans = cache_->Get(key);
       if(!ans){
         thread->IncMiss();
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
         cache_->Set(key);
       }
     }
@@ -660,19 +663,21 @@ bool MyCacheTest(){
 int main(int argc, char **argv) {
   assert(MyCacheTest());
   // 测试相同命中率不通线程数下的性能
-//  FLAGS_hit_rate = 1;
-//  FLAGS_factor = 30;
-//  for(int i=1;i<600;i<<=1){
-//    FLAGS_threads = i;
-//    TestCase();
-//    FLAGS_ops_per_thread = 0;
-//  }
+  FLAGS_hit_rate = 1;
+  FLAGS_factor = 30;
+  for(int i=1;i<600;i<<=1){
+    FLAGS_threads = i;
+    TestCase();
+    FLAGS_ops_per_thread = 0;
+  }
 
   // 测试单线程下不通命中率下性能
   FLAGS_threads = 1;
-  FLAGS_cache_size = 1024;
-  FLAGS_ops_per_thread = 256000;
-  for (double i = 0.2; i <= 1; i+=0.2) {
+//  FLAGS_cache_size = 1024;
+//  FLAGS_ops_per_thread = 256000;
+  FLAGS_populate_cache = false;
+  FLAGS_factor = 1.1;
+  for (double i = 0.2; i <= 1.0; i+=0.2) {
 //    FLAGS_factor = i;
     FLAGS_hit_rate = i;
     TestCase();
