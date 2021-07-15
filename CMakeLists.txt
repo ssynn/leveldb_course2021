@@ -546,3 +546,8 @@ add_executable(cache_bench
         "${PROJECT_SOURCE_DIR}/test/cache_bench.cc"
         )
 target_link_libraries(cache_bench leveldb -lpthread -lm)
+
+add_executable(cache_bench_create_key
+        "${PROJECT_SOURCE_DIR}/test/cache_bench_create_key.cc"
+        )
+target_link_libraries(cache_bench_create_key leveldb -lpthread -lm)
